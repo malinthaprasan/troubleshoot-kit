@@ -14,6 +14,8 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.List;
 
 @Component
 @EnableAsync
@@ -30,6 +32,7 @@ public class DBTester implements InitializingBean {
     @Async
     public void afterPropertiesSet() throws Exception {
         Connection connection = null;
+        List<Connection> notClosedConnections = new ArrayList<>();
         long sumTimesGetConnection = 0;
         try {
             int j = 1;
@@ -40,7 +43,8 @@ public class DBTester implements InitializingBean {
                 log.info("Staring test round : " + j);
                 long start = System.currentTimeMillis();
                 connection = dataSourceConfig.getConnection();
-                log.info("Connection : " + connection.getMetaData().getURL() + " | Time to (ms) getConnection : "
+                notClosedConnections.add(connection);
+                log.info("Connection #" + notClosedConnections.size() + ":" + connection.getMetaData().getURL() + " | Time to (ms) getConnection : "
                         + (System.currentTimeMillis() - start));
                 sumTimesGetConnection += (System.currentTimeMillis() - start);
                 log.info("Starting to iterate test round " + j + " for : "
@@ -66,7 +70,7 @@ public class DBTester implements InitializingBean {
                                 try {
                                     String columnValue = rs.getString(n);
                                     log.info( rsmd.getColumnName(n) + " - " +  columnValue);
-                                }catch (ClassCastException e){
+                                } catch (ClassCastException e){
                                     log.error( "Error while casting java.sql.Type: " + rsmd.getColumnType(n)+ " to string", e);
                                 }
                             }
@@ -80,8 +84,23 @@ public class DBTester implements InitializingBean {
                 log.info("Average time to rs.next() (ms) : " + (avaRSTim / testConfig.getIterationsPerConnection()));
                 log.debug("Sleeping for : " + testConfig.getSleepTime());
                 Thread.sleep(testConfig.getSleepTime());
-                connection.close();
+                if (notClosedConnections.size() >= testConfig.getConcurrentConnections()) {
+                    log.info("Not closed connection usage reached limit :" + testConfig.getConcurrentConnections());
+                    for (int i = 0; i < notClosedConnections.size(); i++) {
+                        Connection conn = notClosedConnections.get(i);
+                        conn.close();
+                        log.info("Closed connection #" + i);
+                    }
+                    notClosedConnections.clear();
+                } else {
+                    log.info("Not closed connection usage : " + notClosedConnections.size());
+                }
                 j++;
+            }
+            if (!notClosedConnections.isEmpty()) {
+                for (Connection conn: notClosedConnections) {
+                    conn.close();
+                }
             }
             log.info("Average time to get connection (ms) : " + (sumTimesGetConnection / testConfig.getTotalIterations()));
         } catch (Exception e) {

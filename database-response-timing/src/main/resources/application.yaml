@@ -1,23 +1,24 @@
 spring:
   datasource:
     #Sample mysql connection More information : https://docs.spring.io/spring-boot/docs/current/reference/html/appendix-application-properties.html#common-application-properties-data
-    url: "jdbc:mysql://localhost:3306/test"
-    username: "root"
-    password: "strongpassword"
-    driver-class-name: "com.mysql.jdbc.Driver"
+    url: "jdbc:mysql://choreo-dev-ctrl-plane.mysql.database.azure.com:3306/choreo_apim_user_db?useSSL=true&requireSSL=true&serverTimezone=UTC"
+    username: "choreo_apim_user_db_user@choreo-dev-ctrl-plane"
+    password: "vYbyQ6DuHuHVjhM7"
+    driver-class-name: "com.mysql.cj.jdbc.Driver"
     type: "org.apache.tomcat.jdbc.pool.DataSource"
     #Configs can found in https://docs.spring.io/spring-boot/docs/current/reference/html/appendix-application-properties.html#spring.datasource.tomcat
     tomcat:
       initial-size: 1
-      max-active: 2
+      max-active: 1
       min-idle: 1
 
 testconfig:
   totalIterations: 2
   iterationsPerConnection: 1
-  sleepTime: 10000
-  query: "SELECT * FROM abc"
+  sleepTime: 5000
+  query: "SELECT 1"
   logResultSet: false
+  concurrentConnections: 2
 
 #Logging configuration more information : https://docs.spring.io/spring-boot/docs/current/reference/html/appendix-application-properties.html#logging.charset.console
 logging:
